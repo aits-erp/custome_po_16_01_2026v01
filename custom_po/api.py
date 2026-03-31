@@ -9,6 +9,7 @@ def get_items_from_sales_orders(sales_orders):
     and return them for Purchase Order
     """
 
+    # Convert string to list (if needed)
     if isinstance(sales_orders, str):
         sales_orders = json.loads(sales_orders)
 
@@ -16,13 +17,6 @@ def get_items_from_sales_orders(sales_orders):
 
     for so_name in sales_orders:
         so = frappe.get_doc("Sales Order", so_name)
-
-        # 🔥 GET SO LEVEL CBM (priority logic)
-        so_cbm = (
-            so.custom_total_cbm
-            or so.custom_totals_in_cbm
-            or 0
-        )
 
         for row in so.items:
             po_items.append({
@@ -32,11 +26,9 @@ def get_items_from_sales_orders(sales_orders):
                 "qty": row.qty,
                 "rate": row.rate,
                 "uom": row.uom,
-                "schedule_date": today(),
+                "schedule_date": today(),  # or row.delivery_date if you prefer
                 "sales_order": so.name,
-                "sales_order_item": row.name,
-                # 🔥 PASS CBM TO ITEM
-                "custom_so_cbm": so_cbm
+                "sales_order_item": row.name
             })
 
     return po_items

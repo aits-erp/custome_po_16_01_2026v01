@@ -12,26 +12,24 @@ frappe.ui.form.on("Purchase Order", {
 
 function open_sales_order_dialog(frm) {
 
-  let dialog = new frappe.ui.form.MultiSelectDialog({
+  let dialog;
+
+  dialog = new frappe.ui.form.MultiSelectDialog({
     doctype: "Sales Order",
     target: frm,
 
-    // 🔹 FILTER FIELDS (VISIBLE)
     setters: {
       customer: null,
       status: null
     },
 
-    // 🔹 QUERY WITH DYNAMIC FILTERS
     get_query() {
       let filters = {
-        docstatus: ["in", [0, 1, 2]]
+        docstatus: ["in", [0, 1]]
       };
 
-      const customer = dialog.dialog.get_value("customer");
-      const status = dialog.dialog.get_value("status");
-
-    
+      // ✅ SAFE ACCESS (important fix)
+      let status = dialog?.dialog?.get_value("status");
 
       if (status) {
         filters.status = status;
@@ -54,7 +52,7 @@ function open_sales_order_dialog(frm) {
         callback(r) {
           if (!r.message) return;
 
-          // 🔹 Remove default empty row
+          // Remove empty row
           if (
             frm.doc.items &&
             frm.doc.items.length === 1 &&
@@ -63,7 +61,7 @@ function open_sales_order_dialog(frm) {
             frm.clear_table("items");
           }
 
-          // 🔹 Add items
+          // Add items
           r.message.forEach(row => {
             let d = frm.add_child("items");
 
@@ -76,7 +74,6 @@ function open_sales_order_dialog(frm) {
             d.schedule_date = row.schedule_date;
             d.sales_order = row.sales_order;
             d.sales_order_item = row.sales_order_item;
-            d.custom_so_cbm = row.custom_so_cbm || 0;
 
             frm.script_manager.trigger("qty", d.doctype, d.name);
             frm.script_manager.trigger("rate", d.doctype, d.name);
@@ -85,18 +82,25 @@ function open_sales_order_dialog(frm) {
           frm.refresh_field("items");
           frm.trigger("calculate_taxes_and_totals");
 
+          // ✅ VERY IMPORTANT (destroy dialog)
           dialog.dialog.hide();
+          dialog = null;
         }
       });
     }
   });
-    setTimeout(() => {
-    dialog.dialog.fields_dict.customer &&
-      dialog.dialog.fields_dict.customer.df &&
+
+  // ✅ Force show (important)
+  dialog.dialog.show();
+
+  // Hide customer filter
+  setTimeout(() => {
+    if (dialog.dialog.fields_dict.customer) {
       dialog.dialog.fields_dict.customer.$wrapper.hide();
+    }
   }, 200);
 
-  // 🔹 STATUS OPTIONS (VISIBLE, NOT HIDDEN)
+  // Status options
   setTimeout(() => {
     if (dialog.dialog.fields_dict.status) {
       dialog.dialog.fields_dict.status.df.options = [
